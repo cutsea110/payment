@@ -131,12 +131,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
 
 [[package]]
+name = "parsec-rs"
+version = "0.1.0"
+source = "git+https://github.com/cutsea110/fragments.git?branch=main#e3c6634f9d7c521eb34df0a913dbc356ba2c8246"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "payroll"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "dyn-clone",
+ "parsec-rs",
  "thiserror",
+ "tx-rs",
 ]
 
 [[package]]
@@ -213,6 +223,11 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "tx-rs"
+version = "0.1.0"
+source = "git+https://github.com/cutsea110/fragments.git?branch=main#e3c6634f9d7c521eb34df0a913dbc356ba2c8246"
 
 [[package]]
 name = "unicode-ident"

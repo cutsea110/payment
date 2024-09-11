@@ -2,8 +2,11 @@ use chrono::{Datelike, Days, NaiveDate, Weekday};
 use dyn_clone::DynClone;
 use std::fmt::Debug;
 use std::ops::RangeInclusive;
+use thiserror::Error;
+use tx_rs::Tx;
 
 type EmployeeId = u32;
+type MemberId = u32;
 
 #[derive(Debug, Clone)]
 struct Employee {
@@ -209,6 +212,38 @@ impl Affiliation for AffiliationImpl {
             }
         }
     }
+}
+
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
+enum DaoError {
+    #[error("dummy")]
+    Dummy,
+}
+
+trait PayrollDao<Ctx> {
+    fn insert(&self, emp: Employee) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = DaoError>;
+    fn delete(&self, id: EmployeeId) -> impl tx_rs::Tx<Ctx, Item = (), Err = DaoError>;
+    fn fetch(&self, id: EmployeeId) -> impl tx_rs::Tx<Ctx, Item = Employee, Err = DaoError>;
+    fn update(&self, emp: Employee) -> impl tx_rs::Tx<Ctx, Item = (), Err = DaoError>;
+    fn fetch_all(&self) -> impl tx_rs::Tx<Ctx, Item = Vec<Employee>, Err = DaoError>;
+    fn add_union_member(
+        &self,
+        member_id: MemberId,
+        emp_id: EmployeeId,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = DaoError>;
+    fn remove_union_member(
+        &self,
+        member_id: MemberId,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = DaoError>;
+    fn record_paycheck(
+        &self,
+        emp_id: EmployeeId,
+        pc: Paycheck,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = DaoError>;
+}
+
+trait HavePayrollDao<Ctx> {
+    fn dao(&self) -> &impl PayrollDao<Ctx>;
 }
 
 fn main() {

@@ -6,4 +6,6 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
 dyn-clone = "1.0.17"
+parsec-rs = { git = "https://github.com/cutsea110/fragments.git", branch = "main" }
 thiserror = "1.0.63"
+tx-rs = { git = "https://github.com/cutsea110/fragments.git", branch = "main" }
