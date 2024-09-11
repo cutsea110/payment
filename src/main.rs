@@ -13,9 +13,10 @@ struct Employee {
     name: String,
     address: String,
 
-    classification: Box<dyn PaymentClassification>,
-    schedule: Box<dyn PaymentSchedule>,
-    method: Box<dyn PaymentMethod>,
+    classification: Rc<RefCell<dyn PaymentClassification>>,
+    schedule: Rc<RefCell<dyn PaymentSchedule>>,
+    method: Rc<RefCell<dyn PaymentMethod>>,
+    affiliation: Rc<RefCell<dyn Affiliation>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -369,6 +370,165 @@ impl PayrollDao<()> for MockDb {
     }
 }
 
+#[derive(Error, Debug, Clone, PartialEq)]
+enum UsecaseError {
+    #[error("register employee failed: {0}")]
+    RegisterEmployeeFailed(DaoError),
+    #[error("unregister employee failed: {0}")]
+    UnregisterEmployeeFailed(DaoError),
+    #[error("employee not found: {0}")]
+    NotFound(DaoError),
+    #[error("can't get all employees: {0}")]
+    GetAllFailed(DaoError),
+    #[error("employee is not hourly salary: {0}")]
+    NotHourlySalary(String),
+    #[error("employee is not commissioned salary: {0}")]
+    NotCommissionedSalary(String),
+    #[error("update employee failed: {0}")]
+    UpdateEmployeeFailed(DaoError),
+    #[error("employee is not union member: {0}")]
+    NotUnionMember(String),
+    #[error("add union member failed: {0}")]
+    AddUnionMemberFailed(DaoError),
+    #[error("remove union member failed: {0}")]
+    RemoveUnionMemberFailed(DaoError),
+}
+
+trait AddEmployeeTx<Ctx>: HavePayrollDao<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        name: &str,
+        address: &str,
+        classification: Rc<RefCell<dyn PaymentClassification>>,
+        schedule: Rc<RefCell<dyn PaymentSchedule>>,
+    ) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        let emp = Employee {
+            emp_id,
+            name: name.to_string(),
+            address: address.to_string(),
+            classification,
+            schedule,
+            method: Rc::new(RefCell::new(PaymentMethodImpl::Hold)),
+            affiliation: Rc::new(RefCell::new(AffiliationImpl::NoAffiliation)),
+        };
+        self.dao()
+            .insert(emp)
+            .map_err(UsecaseError::RegisterEmployeeFailed)
+    }
+}
+// blanket implementation
+impl<T, Ctx> AddEmployeeTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait AddSalaryEmployeeTx<Ctx>: AddEmployeeTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        name: &str,
+        address: &str,
+        salary: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        AddEmployeeTx::execute(
+            self,
+            emp_id,
+            name,
+            address,
+            Rc::new(RefCell::new(PaymentClassificationImpl::Salaried { salary })),
+            Rc::new(RefCell::new(PaymentScheduleImpl::Monthly)),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> AddSalaryEmployeeTx<Ctx> for T where T: AddEmployeeTx<Ctx> {}
+
+trait DeleteEmployeeTx<Ctx>: HavePayrollDao<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        self.dao()
+            .delete(emp_id)
+            .map_err(UsecaseError::UnregisterEmployeeFailed)
+    }
+}
+// blanket implementation
+impl<T, Ctx> DeleteEmployeeTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait Transaction<Ctx> {
+    fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
+}
+
+struct AddSalaryEmployeeTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    name: String,
+    address: String,
+    salary: f32,
+}
+impl HavePayrollDao<()> for AddSalaryEmployeeTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for AddSalaryEmployeeTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        AddSalaryEmployeeTx::execute(
+            self,
+            self.emp_id,
+            &self.name,
+            &self.address,
+            self.salary.clone(),
+        )
+        .map(|_| ())
+        .run(ctx)
+    }
+}
+
+struct DeleteEmployeeTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+}
+impl HavePayrollDao<()> for DeleteEmployeeTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for DeleteEmployeeTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        DeleteEmployeeTx::execute(self, self.emp_id)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
 fn main() {
-    println!("Hello, world!");
+    let db = MockDb::new();
+
+    let tx: Box<dyn Transaction<()>> = Box::new(AddSalaryEmployeeTxImpl {
+        dao: db.clone(),
+        emp_id: 1,
+        name: "Bob".to_string(),
+        address: "Home".to_string(),
+        salary: 1020.75,
+    });
+    tx.execute(&mut ()).expect("add salary employee");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(DeleteEmployeeTxImpl {
+        dao: db.clone(),
+        emp_id: 1,
+    });
+    tx.execute(&mut ()).expect("delete employee");
+    println!("{:#?}", db);
 }
