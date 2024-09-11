@@ -447,6 +447,62 @@ trait AddSalaryEmployeeTx<Ctx>: AddEmployeeTx<Ctx> {
 // blanket implementation
 impl<T, Ctx> AddSalaryEmployeeTx<Ctx> for T where T: AddEmployeeTx<Ctx> {}
 
+trait AddHourlyEmployeeTx<Ctx>: AddEmployeeTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        name: &str,
+        address: &str,
+        hourly_rate: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        AddEmployeeTx::execute(
+            self,
+            emp_id,
+            name,
+            address,
+            Rc::new(RefCell::new(PaymentClassificationImpl::Hourly {
+                hourly_rate,
+                timecards: vec![],
+            })),
+            Rc::new(RefCell::new(PaymentScheduleImpl::Weekly)),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> AddHourlyEmployeeTx<Ctx> for T where T: AddEmployeeTx<Ctx> {}
+
+trait AddCommissionedEmployeeTx<Ctx>: AddEmployeeTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        name: &str,
+        address: &str,
+        salary: f32,
+        commission_rate: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        AddEmployeeTx::execute(
+            self,
+            emp_id,
+            name,
+            address,
+            Rc::new(RefCell::new(PaymentClassificationImpl::Commissioned {
+                salary,
+                commission_rate,
+                sales_receipts: vec![],
+            })),
+            Rc::new(RefCell::new(PaymentScheduleImpl::Biweekly)),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> AddCommissionedEmployeeTx<Ctx> for T where T: AddEmployeeTx<Ctx> {}
+
 trait DeleteEmployeeTx<Ctx>: HavePayrollDao<Ctx> {
     fn execute<'a>(
         &'a self,
@@ -494,6 +550,62 @@ impl Transaction<()> for AddSalaryEmployeeTxImpl {
     }
 }
 
+struct AddHourlyEmployeeTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    name: String,
+    address: String,
+    hourly_rate: f32,
+}
+impl HavePayrollDao<()> for AddHourlyEmployeeTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for AddHourlyEmployeeTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        AddHourlyEmployeeTx::execute(
+            self,
+            self.emp_id,
+            &self.name,
+            &self.address,
+            self.hourly_rate.clone(),
+        )
+        .map(|_| ())
+        .run(ctx)
+    }
+}
+
+struct AddCommissionedEmployeeTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    name: String,
+    address: String,
+    salary: f32,
+    commission_rate: f32,
+}
+impl HavePayrollDao<()> for AddCommissionedEmployeeTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for AddCommissionedEmployeeTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        AddCommissionedEmployeeTx::execute(
+            self,
+            self.emp_id,
+            &self.name,
+            &self.address,
+            self.salary.clone(),
+            self.commission_rate.clone(),
+        )
+        .map(|_| ())
+        .run(ctx)
+    }
+}
+
 struct DeleteEmployeeTxImpl {
     dao: MockDb,
 
@@ -525,9 +637,44 @@ fn main() {
     tx.execute(&mut ()).expect("add salary employee");
     println!("{:#?}", db);
 
+    let tx: Box<dyn Transaction<()>> = Box::new(AddHourlyEmployeeTxImpl {
+        dao: db.clone(),
+        emp_id: 2,
+        name: "Alice".to_string(),
+        address: "Home".to_string(),
+        hourly_rate: 10.5,
+    });
+    tx.execute(&mut ()).expect("add hourly employee");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(AddCommissionedEmployeeTxImpl {
+        dao: db.clone(),
+        emp_id: 3,
+        name: "Charlie".to_string(),
+        address: "Home".to_string(),
+        salary: 420.0,
+        commission_rate: 0.25,
+    });
+    tx.execute(&mut ()).expect("add commissioned employee");
+    println!("{:#?}", db);
+
     let tx: Box<dyn Transaction<()>> = Box::new(DeleteEmployeeTxImpl {
         dao: db.clone(),
         emp_id: 1,
+    });
+    tx.execute(&mut ()).expect("delete employee");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(DeleteEmployeeTxImpl {
+        dao: db.clone(),
+        emp_id: 2,
+    });
+    tx.execute(&mut ()).expect("delete employee");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(DeleteEmployeeTxImpl {
+        dao: db.clone(),
+        emp_id: 3,
     });
     tx.execute(&mut ()).expect("delete employee");
     println!("{:#?}", db);
