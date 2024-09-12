@@ -1494,6 +1494,38 @@ fn main() {
     tx.execute(&mut ()).expect("change employee to salaried");
     println!("{:#?}", db);
 
+    let tx: Box<dyn Transaction<()>> = Box::new(ChangeEmployeeMailTxImpl {
+        dao: db.clone(),
+        emp_id: 4,
+        address: "daby@example.com".to_string(),
+    });
+    tx.execute(&mut ()).expect("change mail");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ChangeEmployeeDirectTxImpl {
+        dao: db.clone(),
+        emp_id: 3,
+        bank: "mufg".to_string(),
+        account: "1234567".to_string(),
+    });
+    tx.execute(&mut ()).expect("change direct");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ChangeEmployeeMailTxImpl {
+        dao: db.clone(),
+        emp_id: 2,
+        address: "bob@example.com".to_string(),
+    });
+    tx.execute(&mut ()).expect("change mail");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ChangeEmployeeHoldTxImpl {
+        dao: db.clone(),
+        emp_id: 4,
+    });
+    tx.execute(&mut ()).expect("change hold");
+    println!("{:#?}", db);
+
     let tx: Box<dyn Transaction<()>> = Box::new(TimeCardTxImpl {
         dao: db.clone(),
         emp_id: 2,
