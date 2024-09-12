@@ -1,6 +1,6 @@
 use chrono::{Datelike, Days, NaiveDate, Weekday};
 use dyn_clone::DynClone;
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, ops::RangeInclusive, rc::Rc};
+use std::{any::Any, cell::RefCell, collections::HashMap, fmt::Debug, ops::RangeInclusive, rc::Rc};
 use thiserror::Error;
 use tx_rs::Tx;
 
@@ -48,9 +48,8 @@ struct Paycheck {
 }
 
 trait PaymentClassification: DynClone + Debug {
+    fn as_any_mut(&mut self) -> &mut dyn Any;
     fn calculate_pay(&self, pc: &Paycheck) -> f32;
-    fn add_timecard(&mut self, tc: TimeCard);
-    fn add_sales_receipt(&mut self, sr: SalesReceipt);
 }
 dyn_clone::clone_trait_object!(PaymentClassification);
 
@@ -91,7 +90,32 @@ enum PaymentClassificationImpl {
         sales_receipts: Vec<SalesReceipt>,
     },
 }
+impl PaymentClassificationImpl {
+    fn add_timecard(&mut self, tc: TimeCard) {
+        match self {
+            PaymentClassificationImpl::Hourly { timecards, .. } => {
+                timecards.push(tc);
+            }
+            _ => {
+                panic!("Timecard is not applicable for this classification");
+            }
+        }
+    }
+    fn add_sales_receipt(&mut self, sr: SalesReceipt) {
+        match self {
+            PaymentClassificationImpl::Commissioned { sales_receipts, .. } => {
+                sales_receipts.push(sr);
+            }
+            _ => {
+                panic!("Sales receipt is not applicable for this classification");
+            }
+        }
+    }
+}
 impl PaymentClassification for PaymentClassificationImpl {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
     fn calculate_pay(&self, pc: &Paycheck) -> f32 {
         match self {
             PaymentClassificationImpl::Salaried { salary } => *salary,
@@ -128,26 +152,6 @@ impl PaymentClassification for PaymentClassificationImpl {
                     }
                 }
                 total_pay
-            }
-        }
-    }
-    fn add_timecard(&mut self, tc: TimeCard) {
-        match self {
-            PaymentClassificationImpl::Hourly { timecards, .. } => {
-                timecards.push(tc);
-            }
-            _ => {
-                panic!("Timecard is not applicable for this classification");
-            }
-        }
-    }
-    fn add_sales_receipt(&mut self, sr: SalesReceipt) {
-        match self {
-            PaymentClassificationImpl::Commissioned { sales_receipts, .. } => {
-                sales_receipts.push(sr);
-            }
-            _ => {
-                panic!("Sales receipt is not applicable for this classification");
             }
         }
     }
@@ -217,8 +221,9 @@ impl PaymentMethod for PaymentMethodImpl {
 }
 
 trait Affiliation: DynClone + Debug {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
     fn calculate_deductions(&self, pc: &Paycheck) -> f32;
-    fn get_member_id(&self) -> MemberId;
 }
 dyn_clone::clone_trait_object!(Affiliation);
 
@@ -226,6 +231,11 @@ dyn_clone::clone_trait_object!(Affiliation);
 struct ServiceCharge {
     date: NaiveDate,
     amount: f32,
+}
+impl ServiceCharge {
+    fn new(date: NaiveDate, amount: f32) -> Self {
+        Self { date, amount }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -237,7 +247,33 @@ enum AffiliationImpl {
         service_charges: Vec<ServiceCharge>,
     },
 }
+impl AffiliationImpl {
+    fn add_service_charge(&mut self, sc: ServiceCharge) {
+        match self {
+            AffiliationImpl::Unaffiliated => {
+                panic!("Service charge is not applicable for unaffiliated");
+            }
+            AffiliationImpl::Union {
+                service_charges, ..
+            } => {
+                service_charges.push(sc);
+            }
+        }
+    }
+    fn get_member_id(&self) -> MemberId {
+        match self {
+            AffiliationImpl::Unaffiliated => panic!("Unaffiliated has no member id"),
+            AffiliationImpl::Union { member_id, .. } => *member_id,
+        }
+    }
+}
 impl Affiliation for AffiliationImpl {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
     fn calculate_deductions(&self, pc: &Paycheck) -> f32 {
         match self {
             AffiliationImpl::Unaffiliated => 0.0,
@@ -263,12 +299,6 @@ impl Affiliation for AffiliationImpl {
                 }
                 total_deductions
             }
-        }
-    }
-    fn get_member_id(&self) -> MemberId {
-        match self {
-            AffiliationImpl::Unaffiliated => panic!("Unaffiliated has no member id"),
-            AffiliationImpl::Union { member_id, .. } => *member_id,
         }
     }
 }
@@ -300,6 +330,10 @@ trait PayrollDao<Ctx> {
         &self,
         member_id: MemberId,
     ) -> impl tx_rs::Tx<Ctx, Item = (), Err = DaoError>;
+    fn find_union_member(
+        &self,
+        member_id: MemberId,
+    ) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = DaoError>;
     fn record_paycheck(
         &self,
         emp_id: EmployeeId,
@@ -412,7 +446,18 @@ impl PayrollDao<()> for MockDb {
             Ok(())
         })
     }
-
+    fn find_union_member(
+        &self,
+        member_id: MemberId,
+    ) -> impl tx_rs::Tx<(), Item = EmployeeId, Err = DaoError> {
+        tx_rs::with_tx(move |_| {
+            self.union_members
+                .borrow()
+                .get(&member_id)
+                .map(|&v| v)
+                .ok_or(DaoError::FetchError(format!("member_id: {}", member_id)))
+        })
+    }
     fn record_paycheck(
         &self,
         emp_id: EmployeeId,
@@ -439,14 +484,12 @@ enum UsecaseError {
     NotFound(DaoError),
     #[error("can't get all employees: {0}")]
     GetAllFailed(DaoError),
-    #[error("employee is not hourly salary: {0}")]
-    NotHourlySalary(String),
-    #[error("employee is not commissioned salary: {0}")]
-    NotCommissionedSalary(String),
+    #[error("unexpected payment classification: {0}")]
+    UnexpectedPaymentClassification(String),
     #[error("update employee failed: {0}")]
     UpdateEmployeeFailed(DaoError),
-    #[error("employee is not union member: {0}")]
-    NotUnionMember(String),
+    #[error("unexpected affiliation: {0}")]
+    UnexpectedAffiliation(String),
     #[error("add union member failed: {0}")]
     AddUnionMemberFailed(DaoError),
     #[error("remove union member failed: {0}")]
@@ -830,6 +873,12 @@ trait TimeCardTx<Ctx>: HavePayrollDao<Ctx> {
                 .map_err(UsecaseError::NotFound)?;
             emp.classification
                 .borrow_mut()
+                .as_any_mut()
+                .downcast_mut::<PaymentClassificationImpl>()
+                .ok_or(UsecaseError::UnexpectedPaymentClassification(format!(
+                    "expected hourly emp_id: {}",
+                    emp_id
+                )))?
                 .add_timecard(TimeCard::new(date, hours));
             self.dao()
                 .update(emp)
@@ -859,6 +908,12 @@ trait SalesReceiptTx<Ctx>: HavePayrollDao<Ctx> {
                 .map_err(UsecaseError::NotFound)?;
             emp.classification
                 .borrow_mut()
+                .as_any_mut()
+                .downcast_mut::<PaymentClassificationImpl>()
+                .ok_or(UsecaseError::UnexpectedPaymentClassification(format!(
+                    "expected commissioned emp_id: {}",
+                    emp_id
+                )))?
                 .add_sales_receipt(SalesReceipt::new(date, amount));
             self.dao()
                 .update(emp)
@@ -904,7 +959,7 @@ trait ChangeUnionMemberTx<Ctx>: ChangeAffiliationTx<Ctx> {
         ChangeAffiliationTx::execute(
             self,
             emp_id,
-            move |ctx, emp| {
+            move |ctx, _| {
                 self.dao()
                     .add_union_member(member_id, emp_id)
                     .run(ctx)
@@ -933,7 +988,18 @@ trait ChangeUnaffiliatedTx<Ctx>: ChangeAffiliationTx<Ctx> {
             self,
             emp_id,
             move |ctx, emp| {
-                let member_id = emp.affiliation.borrow().get_member_id();
+                let member_id = emp
+                    .affiliation
+                    .borrow()
+                    .as_any()
+                    .downcast_ref::<AffiliationImpl>()
+                    .map_or(
+                        Err(UsecaseError::UnexpectedAffiliation(format!(
+                            "expected unaffiliated emp_id: {}",
+                            emp_id
+                        ))),
+                        |a| Ok(a.get_member_id()),
+                    )?;
                 self.dao()
                     .remove_union_member(member_id)
                     .run(ctx)
@@ -943,6 +1009,48 @@ trait ChangeUnaffiliatedTx<Ctx>: ChangeAffiliationTx<Ctx> {
         )
     }
 }
+// blanket implementation
+impl<T, Ctx> ChangeUnaffiliatedTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait ServiceChargeTx<Ctx>: HavePayrollDao<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        member_id: MemberId,
+        date: NaiveDate,
+        amount: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        tx_rs::with_tx(move |ctx| {
+            let emp_id = self
+                .dao()
+                .find_union_member(member_id)
+                .run(ctx)
+                .map_err(UsecaseError::NotFound)?;
+            let emp = self
+                .dao()
+                .fetch(emp_id)
+                .run(ctx)
+                .map_err(UsecaseError::NotFound)?;
+            emp.affiliation
+                .borrow_mut()
+                .as_any_mut()
+                .downcast_mut::<AffiliationImpl>()
+                .ok_or(UsecaseError::UnexpectedAffiliation(format!(
+                    "expected union emp_id: {}",
+                    emp_id
+                )))?
+                .add_service_charge(ServiceCharge::new(date, amount));
+            self.dao()
+                .update(emp)
+                .run(ctx)
+                .map_err(UsecaseError::UpdateEmployeeFailed)
+        })
+    }
+}
+// blanket implementation
+impl<T, Ctx> ServiceChargeTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
 
 trait Transaction<Ctx> {
     fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
