@@ -1332,6 +1332,64 @@ impl Transaction<()> for SalesReceiptTxImpl {
     }
 }
 
+struct ChangeUnionMemberTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    member_id: MemberId,
+    dues: f32,
+}
+impl HavePayrollDao<()> for ChangeUnionMemberTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for ChangeUnionMemberTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        ChangeUnionMemberTx::execute(self, self.emp_id, self.member_id, self.dues)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
+struct ChangeUnaffiliatedTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+}
+impl HavePayrollDao<()> for ChangeUnaffiliatedTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for ChangeUnaffiliatedTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        ChangeUnaffiliatedTx::execute(self, self.emp_id)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
+struct ServiceChargeTxImpl {
+    dao: MockDb,
+
+    member_id: MemberId,
+    date: NaiveDate,
+    amount: f32,
+}
+impl HavePayrollDao<()> for ServiceChargeTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for ServiceChargeTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        ServiceChargeTx::execute(self, self.member_id, self.date, self.amount)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
 struct DeleteEmployeeTxImpl {
     dao: MockDb,
 
@@ -1470,6 +1528,40 @@ fn main() {
         amount: 3210.0,
     });
     tx.execute(&mut ()).expect("add sales receipt");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ChangeUnionMemberTxImpl {
+        dao: db.clone(),
+        emp_id: 1,
+        member_id: 7124,
+        dues: 9.75,
+    });
+    tx.execute(&mut ()).expect("change union member");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ServiceChargeTxImpl {
+        dao: db.clone(),
+        member_id: 7124,
+        date: NaiveDate::from_ymd_opt(2024, 9, 12).unwrap(),
+        amount: 371.50,
+    });
+    tx.execute(&mut ()).expect("add service charge");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ServiceChargeTxImpl {
+        dao: db.clone(),
+        member_id: 7124,
+        date: NaiveDate::from_ymd_opt(2024, 9, 26).unwrap(),
+        amount: 123.75,
+    });
+    tx.execute(&mut ()).expect("add service charge");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(ChangeUnaffiliatedTxImpl {
+        dao: db.clone(),
+        emp_id: 1,
+    });
+    tx.execute(&mut ()).expect("change unaffiliated");
     println!("{:#?}", db);
 
     let tx: Box<dyn Transaction<()>> = Box::new(DeleteEmployeeTxImpl {
