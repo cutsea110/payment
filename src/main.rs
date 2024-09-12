@@ -29,6 +29,8 @@ struct Paycheck {
 
 trait PaymentClassification: DynClone + Debug {
     fn calculate_pay(&self, pc: &Paycheck) -> f32;
+    fn add_timecard(&mut self, tc: TimeCard);
+    fn add_sales_receipt(&mut self, sr: SalesReceipt);
 }
 dyn_clone::clone_trait_object!(PaymentClassification);
 
@@ -37,11 +39,21 @@ struct TimeCard {
     date: NaiveDate,
     hours: f32,
 }
+impl TimeCard {
+    fn new(date: NaiveDate, hours: f32) -> Self {
+        Self { date, hours }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 struct SalesReceipt {
     date: NaiveDate,
     amount: f32,
+}
+impl SalesReceipt {
+    fn new(date: NaiveDate, amount: f32) -> Self {
+        Self { date, amount }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,6 +108,26 @@ impl PaymentClassification for PaymentClassificationImpl {
                     }
                 }
                 total_pay
+            }
+        }
+    }
+    fn add_timecard(&mut self, tc: TimeCard) {
+        match self {
+            PaymentClassificationImpl::Hourly { timecards, .. } => {
+                timecards.push(tc);
+            }
+            _ => {
+                panic!("Timecard is not applicable for this classification");
+            }
+        }
+    }
+    fn add_sales_receipt(&mut self, sr: SalesReceipt) {
+        match self {
+            PaymentClassificationImpl::Commissioned { sales_receipts, .. } => {
+                sales_receipts.push(sr);
+            }
+            _ => {
+                panic!("Sales receipt is not applicable for this classification");
             }
         }
     }
@@ -753,6 +785,64 @@ trait ChangeEmployeeMailTx<Ctx>: ChangeEmployeePaymentMethodTx<Ctx> {
 // blanket implementation
 impl<T, Ctx> ChangeEmployeeMailTx<Ctx> for T where T: ChangeEmployeePaymentMethodTx<Ctx> {}
 
+trait TimeCardTx<Ctx>: HavePayrollDao<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        date: NaiveDate,
+        hours: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        tx_rs::with_tx(move |ctx| {
+            let emp = self
+                .dao()
+                .fetch(emp_id)
+                .run(ctx)
+                .map_err(UsecaseError::NotFound)?;
+            emp.classification
+                .borrow_mut()
+                .add_timecard(TimeCard::new(date, hours));
+            self.dao()
+                .update(emp)
+                .run(ctx)
+                .map_err(UsecaseError::UpdateEmployeeFailed)
+        })
+    }
+}
+// blanket implementation
+impl<T, Ctx> TimeCardTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait SalesReceiptTx<Ctx>: HavePayrollDao<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        date: NaiveDate,
+        amount: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        tx_rs::with_tx(move |ctx| {
+            let emp = self
+                .dao()
+                .fetch(emp_id)
+                .run(ctx)
+                .map_err(UsecaseError::NotFound)?;
+            emp.classification
+                .borrow_mut()
+                .add_sales_receipt(SalesReceipt::new(date, amount));
+            self.dao()
+                .update(emp)
+                .run(ctx)
+                .map_err(UsecaseError::UpdateEmployeeFailed)
+        })
+    }
+}
+// blanket implementation
+impl<T, Ctx> SalesReceiptTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
 trait Transaction<Ctx> {
     fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
 }
@@ -993,6 +1083,46 @@ impl Transaction<()> for ChangeEmployeeDirectTxImpl {
     }
 }
 
+struct TimeCardTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    date: NaiveDate,
+    hours: f32,
+}
+impl HavePayrollDao<()> for TimeCardTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for TimeCardTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        TimeCardTx::execute(self, self.emp_id, self.date, self.hours)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
+struct SalesReceiptTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    date: NaiveDate,
+    amount: f32,
+}
+impl HavePayrollDao<()> for SalesReceiptTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for SalesReceiptTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        SalesReceiptTx::execute(self, self.emp_id, self.date, self.amount)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
 struct DeleteEmployeeTxImpl {
     dao: MockDb,
 
@@ -1095,6 +1225,42 @@ fn main() {
         salary: 1100.25,
     });
     tx.execute(&mut ()).expect("change employee to salaried");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(TimeCardTxImpl {
+        dao: db.clone(),
+        emp_id: 2,
+        date: NaiveDate::from_ymd_opt(2024, 9, 11).unwrap(),
+        hours: 8.0,
+    });
+    tx.execute(&mut ()).expect("add time card");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(TimeCardTxImpl {
+        dao: db.clone(),
+        emp_id: 2,
+        date: NaiveDate::from_ymd_opt(2024, 9, 12).unwrap(),
+        hours: 8.5,
+    });
+    tx.execute(&mut ()).expect("add time card");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(SalesReceiptTxImpl {
+        dao: db.clone(),
+        emp_id: 3,
+        date: NaiveDate::from_ymd_opt(2024, 9, 15).unwrap(),
+        amount: 12300.0,
+    });
+    tx.execute(&mut ()).expect("add sales receipt");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(SalesReceiptTxImpl {
+        dao: db.clone(),
+        emp_id: 3,
+        date: NaiveDate::from_ymd_opt(2024, 9, 30).unwrap(),
+        amount: 3210.0,
+    });
+    tx.execute(&mut ()).expect("add sales receipt");
     println!("{:#?}", db);
 
     let tx: Box<dyn Transaction<()>> = Box::new(DeleteEmployeeTxImpl {
