@@ -582,7 +582,7 @@ trait ChangeEmployeeAddressTx<Ctx>: ChangeEmployeeTx<Ctx> {
 // blanket implementation
 impl<T, Ctx> ChangeEmployeeAddressTx<Ctx> for T where T: ChangeEmployeeTx<Ctx> {}
 
-trait ChangeEmployeeClassificationTx<Ctx>: ChangeEmployeeTx<Ctx> {
+trait ChangeEmployeePaymentClassificationTx<Ctx>: ChangeEmployeeTx<Ctx> {
     fn execute<'a>(
         &'a self,
         emp_id: EmployeeId,
@@ -600,9 +600,9 @@ trait ChangeEmployeeClassificationTx<Ctx>: ChangeEmployeeTx<Ctx> {
     }
 }
 // blanket implementation
-impl<T, Ctx> ChangeEmployeeClassificationTx<Ctx> for T where T: ChangeEmployeeTx<Ctx> {}
+impl<T, Ctx> ChangeEmployeePaymentClassificationTx<Ctx> for T where T: ChangeEmployeeTx<Ctx> {}
 
-trait ChangeEmployeeSalariedTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
+trait ChangeEmployeeSalariedTx<Ctx>: ChangeEmployeePaymentClassificationTx<Ctx> {
     fn execute<'a>(
         &'a self,
         emp_id: EmployeeId,
@@ -611,7 +611,7 @@ trait ChangeEmployeeSalariedTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
     where
         Ctx: 'a,
     {
-        ChangeEmployeeClassificationTx::execute(
+        ChangeEmployeePaymentClassificationTx::execute(
             self,
             emp_id,
             Rc::new(RefCell::new(PaymentClassificationImpl::Salaried { salary })),
@@ -620,9 +620,9 @@ trait ChangeEmployeeSalariedTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
     }
 }
 // blanket implementation
-impl<T, Ctx> ChangeEmployeeSalariedTx<Ctx> for T where T: ChangeEmployeeClassificationTx<Ctx> {}
+impl<T, Ctx> ChangeEmployeeSalariedTx<Ctx> for T where T: ChangeEmployeePaymentClassificationTx<Ctx> {}
 
-trait ChangeEmployeeHourlyTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
+trait ChangeEmployeeHourlyTx<Ctx>: ChangeEmployeePaymentClassificationTx<Ctx> {
     fn execute<'a>(
         &'a self,
         emp_id: EmployeeId,
@@ -631,7 +631,7 @@ trait ChangeEmployeeHourlyTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
     where
         Ctx: 'a,
     {
-        ChangeEmployeeClassificationTx::execute(
+        ChangeEmployeePaymentClassificationTx::execute(
             self,
             emp_id,
             Rc::new(RefCell::new(PaymentClassificationImpl::Hourly {
@@ -643,9 +643,9 @@ trait ChangeEmployeeHourlyTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
     }
 }
 // blanket implementation
-impl<T, Ctx> ChangeEmployeeHourlyTx<Ctx> for T where T: ChangeEmployeeClassificationTx<Ctx> {}
+impl<T, Ctx> ChangeEmployeeHourlyTx<Ctx> for T where T: ChangeEmployeePaymentClassificationTx<Ctx> {}
 
-trait ChangeEmployeeCommissionedTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
+trait ChangeEmployeeCommissionedTx<Ctx>: ChangeEmployeePaymentClassificationTx<Ctx> {
     fn execute<'a>(
         &'a self,
         emp_id: EmployeeId,
@@ -655,7 +655,7 @@ trait ChangeEmployeeCommissionedTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
     where
         Ctx: 'a,
     {
-        ChangeEmployeeClassificationTx::execute(
+        ChangeEmployeePaymentClassificationTx::execute(
             self,
             emp_id,
             Rc::new(RefCell::new(PaymentClassificationImpl::Commissioned {
@@ -668,7 +668,90 @@ trait ChangeEmployeeCommissionedTx<Ctx>: ChangeEmployeeClassificationTx<Ctx> {
     }
 }
 // blanket implementation
-impl<T, Ctx> ChangeEmployeeCommissionedTx<Ctx> for T where T: ChangeEmployeeClassificationTx<Ctx> {}
+impl<T, Ctx> ChangeEmployeeCommissionedTx<Ctx> for T where
+    T: ChangeEmployeePaymentClassificationTx<Ctx>
+{
+}
+
+trait ChangeEmployeePaymentMethodTx<Ctx>: ChangeEmployeeTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        method: Rc<RefCell<dyn PaymentMethod>>,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        ChangeEmployeeTx::execute(self, emp_id, |_, emp| {
+            emp.method = method;
+            Ok(())
+        })
+    }
+}
+// blanket implementation
+impl<T, Ctx> ChangeEmployeePaymentMethodTx<Ctx> for T where T: ChangeEmployeeTx<Ctx> {}
+
+trait ChangeEmployeeHoldTx<Ctx>: ChangeEmployeePaymentMethodTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        ChangeEmployeePaymentMethodTx::execute(
+            self,
+            emp_id,
+            Rc::new(RefCell::new(PaymentMethodImpl::Hold)),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> ChangeEmployeeHoldTx<Ctx> for T where T: ChangeEmployeePaymentMethodTx<Ctx> {}
+
+trait ChangeEmployeeDirectTx<Ctx>: ChangeEmployeePaymentMethodTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        bank: &str,
+        account: &str,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        ChangeEmployeePaymentMethodTx::execute(
+            self,
+            emp_id,
+            Rc::new(RefCell::new(PaymentMethodImpl::Direct {
+                bank: bank.to_string(),
+                account: account.to_string(),
+            })),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> ChangeEmployeeDirectTx<Ctx> for T where T: ChangeEmployeePaymentMethodTx<Ctx> {}
+
+trait ChangeEmployeeMailTx<Ctx>: ChangeEmployeePaymentMethodTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        address: &str,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        ChangeEmployeePaymentMethodTx::execute(
+            self,
+            emp_id,
+            Rc::new(RefCell::new(PaymentMethodImpl::Mail {
+                address: address.to_string(),
+            })),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> ChangeEmployeeMailTx<Ctx> for T where T: ChangeEmployeePaymentMethodTx<Ctx> {}
 
 trait Transaction<Ctx> {
     fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
@@ -827,17 +910,9 @@ impl HavePayrollDao<()> for ChangeEmployeeHourlyTxImpl {
 }
 impl Transaction<()> for ChangeEmployeeHourlyTxImpl {
     fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeClassificationTx::execute(
-            self,
-            self.emp_id,
-            Rc::new(RefCell::new(PaymentClassificationImpl::Hourly {
-                hourly_rate: self.hourly_rate,
-                timecards: vec![],
-            })),
-            Rc::new(RefCell::new(PaymentScheduleImpl::Weekly)),
-        )
-        .map(|_| ())
-        .run(ctx)
+        ChangeEmployeeHourlyTx::execute(self, self.emp_id, self.hourly_rate)
+            .map(|_| ())
+            .run(ctx)
     }
 }
 
@@ -855,18 +930,66 @@ impl HavePayrollDao<()> for ChangeEmployeeCommissionedTxImpl {
 }
 impl Transaction<()> for ChangeEmployeeCommissionedTxImpl {
     fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeClassificationTx::execute(
-            self,
-            self.emp_id,
-            Rc::new(RefCell::new(PaymentClassificationImpl::Commissioned {
-                salary: self.salary,
-                commission_rate: self.commission_rate,
-                sales_receipts: vec![],
-            })),
-            Rc::new(RefCell::new(PaymentScheduleImpl::Biweekly)),
-        )
-        .map(|_| ())
-        .run(ctx)
+        ChangeEmployeeCommissionedTx::execute(self, self.emp_id, self.salary, self.commission_rate)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
+struct ChangeEmployeeHoldTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+}
+impl HavePayrollDao<()> for ChangeEmployeeHoldTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for ChangeEmployeeHoldTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        ChangeEmployeeHoldTx::execute(self, self.emp_id)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
+struct ChangeEmployeeMailTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    address: String,
+}
+impl HavePayrollDao<()> for ChangeEmployeeMailTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for ChangeEmployeeMailTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        ChangeEmployeeMailTx::execute(self, self.emp_id, &self.address)
+            .map(|_| ())
+            .run(ctx)
+    }
+}
+
+struct ChangeEmployeeDirectTxImpl {
+    dao: MockDb,
+
+    emp_id: EmployeeId,
+    bank: String,
+    account: String,
+}
+impl HavePayrollDao<()> for ChangeEmployeeDirectTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for ChangeEmployeeDirectTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        ChangeEmployeeDirectTx::execute(self, self.emp_id, &self.bank, &self.account)
+            .map(|_| ())
+            .run(ctx)
     }
 }
 
