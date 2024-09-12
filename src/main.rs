@@ -198,6 +198,7 @@ impl PaymentMethod for PaymentMethodImpl {
 
 trait Affiliation: DynClone + Debug {
     fn calculate_deductions(&self, pc: &Paycheck) -> f32;
+    fn get_member_id(&self) -> MemberId;
 }
 dyn_clone::clone_trait_object!(Affiliation);
 
@@ -209,9 +210,9 @@ struct ServiceCharge {
 
 #[derive(Debug, Clone, PartialEq)]
 enum AffiliationImpl {
-    NoAffiliation,
+    Unaffiliated,
     Union {
-        member_id: u32,
+        member_id: MemberId,
         dues: f32,
         service_charges: Vec<ServiceCharge>,
     },
@@ -219,7 +220,7 @@ enum AffiliationImpl {
 impl Affiliation for AffiliationImpl {
     fn calculate_deductions(&self, pc: &Paycheck) -> f32 {
         match self {
-            AffiliationImpl::NoAffiliation => 0.0,
+            AffiliationImpl::Unaffiliated => 0.0,
             AffiliationImpl::Union {
                 dues,
                 service_charges,
@@ -242,6 +243,12 @@ impl Affiliation for AffiliationImpl {
                 }
                 total_deductions
             }
+        }
+    }
+    fn get_member_id(&self) -> MemberId {
+        match self {
+            AffiliationImpl::Unaffiliated => panic!("Unaffiliated has no member id"),
+            AffiliationImpl::Union { member_id, .. } => *member_id,
         }
     }
 }
@@ -445,7 +452,7 @@ trait AddEmployeeTx<Ctx>: HavePayrollDao<Ctx> {
             classification,
             schedule,
             method: Rc::new(RefCell::new(PaymentMethodImpl::Hold)),
-            affiliation: Rc::new(RefCell::new(AffiliationImpl::NoAffiliation)),
+            affiliation: Rc::new(RefCell::new(AffiliationImpl::Unaffiliated)),
         };
         self.dao()
             .insert(emp)
@@ -842,6 +849,80 @@ trait SalesReceiptTx<Ctx>: HavePayrollDao<Ctx> {
 }
 // blanket implementation
 impl<T, Ctx> SalesReceiptTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait ChangeAffiliationTx<Ctx>: ChangeEmployeeTx<Ctx> {
+    fn execute<'a, F>(
+        &'a self,
+        emp_id: EmployeeId,
+        record_membership: F,
+        affiliation: Rc<RefCell<dyn Affiliation>>,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        F: FnOnce(&mut Ctx, &mut Employee) -> Result<(), UsecaseError>,
+        Ctx: 'a,
+    {
+        ChangeEmployeeTx::<Ctx>::execute(self, emp_id, |ctx, emp| {
+            record_membership(ctx, emp)?;
+            emp.affiliation = affiliation;
+            Ok(())
+        })
+    }
+}
+// blanket implementation
+impl<T, Ctx> ChangeAffiliationTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait ChangeUnionMemberTx<Ctx>: ChangeAffiliationTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+        member_id: MemberId,
+        dues: f32,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        ChangeAffiliationTx::execute(
+            self,
+            emp_id,
+            move |ctx, emp| {
+                self.dao()
+                    .add_union_member(member_id, emp_id)
+                    .run(ctx)
+                    .map_err(UsecaseError::AddUnionMemberFailed)
+            },
+            Rc::new(RefCell::new(AffiliationImpl::Union {
+                member_id,
+                dues,
+                service_charges: vec![],
+            })),
+        )
+    }
+}
+// blanket implementation
+impl<T, Ctx> ChangeUnionMemberTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
+trait ChangeUnaffiliatedTx<Ctx>: ChangeAffiliationTx<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        emp_id: EmployeeId,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        ChangeAffiliationTx::execute(
+            self,
+            emp_id,
+            move |ctx, emp| {
+                let member_id = emp.affiliation.borrow().get_member_id();
+                self.dao()
+                    .remove_union_member(member_id)
+                    .run(ctx)
+                    .map_err(UsecaseError::RemoveUnionMemberFailed)
+            },
+            Rc::new(RefCell::new(AffiliationImpl::Unaffiliated)),
+        )
+    }
+}
 
 trait Transaction<Ctx> {
     fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
