@@ -18,6 +18,26 @@ struct Employee {
     method: Rc<RefCell<dyn PaymentMethod>>,
     affiliation: Rc<RefCell<dyn Affiliation>>,
 }
+impl Employee {
+    fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
+    }
+    fn set_address(&mut self, address: &str) {
+        self.address = address.to_string();
+    }
+    fn set_classification(&mut self, classification: Rc<RefCell<dyn PaymentClassification>>) {
+        self.classification = classification;
+    }
+    fn set_schedule(&mut self, schedule: Rc<RefCell<dyn PaymentSchedule>>) {
+        self.schedule = schedule;
+    }
+    fn set_method(&mut self, method: Rc<RefCell<dyn PaymentMethod>>) {
+        self.method = method;
+    }
+    fn set_affiliation(&mut self, affiliation: Rc<RefCell<dyn Affiliation>>) {
+        self.affiliation = affiliation;
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 struct Paycheck {
@@ -595,7 +615,7 @@ trait ChangeEmployeeNameTx<Ctx>: ChangeEmployeeTx<Ctx> {
         Ctx: 'a,
     {
         ChangeEmployeeTx::execute(self, emp_id, |_, emp| {
-            emp.name = name.to_string();
+            emp.set_name(name);
             Ok(())
         })
     }
@@ -613,7 +633,7 @@ trait ChangeEmployeeAddressTx<Ctx>: ChangeEmployeeTx<Ctx> {
         Ctx: 'a,
     {
         ChangeEmployeeTx::execute(self, emp_id, |_, emp| {
-            emp.address = address.to_string();
+            emp.set_address(address);
             Ok(())
         })
     }
@@ -632,8 +652,8 @@ trait ChangeEmployeePaymentClassificationTx<Ctx>: ChangeEmployeeTx<Ctx> {
         Ctx: 'a,
     {
         ChangeEmployeeTx::execute(self, emp_id, |_, emp| {
-            emp.classification = classification;
-            emp.schedule = schedule;
+            emp.set_classification(classification);
+            emp.set_schedule(schedule);
             Ok(())
         })
     }
@@ -722,7 +742,7 @@ trait ChangeEmployeePaymentMethodTx<Ctx>: ChangeEmployeeTx<Ctx> {
         Ctx: 'a,
     {
         ChangeEmployeeTx::execute(self, emp_id, |_, emp| {
-            emp.method = method;
+            emp.set_method(method);
             Ok(())
         })
     }
@@ -863,7 +883,7 @@ trait ChangeAffiliationTx<Ctx>: ChangeEmployeeTx<Ctx> {
     {
         ChangeEmployeeTx::<Ctx>::execute(self, emp_id, |ctx, emp| {
             record_membership(ctx, emp)?;
-            emp.affiliation = affiliation;
+            emp.set_affiliation(affiliation);
             Ok(())
         })
     }
