@@ -1,0 +1,45 @@
+# Salary emp
+#
+AddEmp 42 "Amy" "Home" S 1020.85
+ChgEmp 42 Name "Alice"
+ChgEmp 42 Address "123 Wall St."
+ChgEmp 42 Direct "mufg" "1234567"
+ChgEmp 42 Member 7234 Dues 9.45
+ServiceCharge 7234 2024-08-02 37.75
+
+# Hourly emp
+#
+AddEmp 57 "Bob" "Home" H 15.25
+ChgEmp 57 Mail "bob@gmail.com"
+
+TimeCard 57 2024-08-01 8.0
+TimeCard 57 2024-08-02 5.0
+TimeCard 57 2024-08-05 8.0
+TimeCard 57 2024-08-07 3.0
+TimeCard 57 2024-08-09 8.0
+
+# Commissioned emp
+#
+AddEmp 71 "Charlie" "Office" C 500.20 0.1
+ChgEmp 71 Member 7235 Dues 8.75
+
+SalesReceipt 71 2024-08-06 1000.0
+SalesReceipt 71 2024-08-06 850.5
+SalesReceipt 71 2024-08-13 149.5
+
+ServiceCharge 7235 2024-08-08 16.5
+ServiceCharge 7235 2024-08-08 3.5
+
+# Payday!
+#
+Payday 2024-08-01
+Payday 2024-08-02
+Payday 2024-08-07
+Payday 2024-08-09
+Payday 2024-08-31
+
+# cleanup!
+#
+DelEmp 42
+DelEmp 57
+DelEmp 71
