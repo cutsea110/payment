@@ -1,5 +1,4 @@
 use chrono::NaiveDate;
-use tx_rs::Tx;
 
 mod payroll_domain {
     use chrono::NaiveDate;
@@ -144,7 +143,6 @@ mod payroll_domain {
     }
     dyn_clone::clone_trait_object!(Affiliation);
 }
-use payroll_domain::*;
 
 mod payroll_impl {
     use chrono::{Datelike, Days, NaiveDate, Weekday};
@@ -444,7 +442,6 @@ mod dao {
         fn dao(&self) -> &impl PayrollDao<Ctx>;
     }
 }
-use dao::*;
 
 mod mock_db {
     use std::{cell::RefCell, collections::HashMap, rc::Rc};
@@ -731,7 +728,6 @@ mod abstract_tx {
     // blanket implementation
     impl<T, Ctx> ChangeEmployeePaymentMethodTx<Ctx> for T where T: ChangeEmployeeTx<Ctx> {}
 }
-use abstract_tx::*;
 
 mod tx_impl {
     use chrono::NaiveDate;
@@ -1224,7 +1220,6 @@ mod tx_impl {
     // blanket implementation
     impl<T, Ctx> ServiceChargeTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
 }
-use tx_impl::*;
 
 mod tx_app {
     use crate::abstract_tx::UsecaseError;
@@ -1235,373 +1230,397 @@ mod tx_app {
 }
 use tx_app::*;
 
-struct AddSalaryEmployeeTxImpl {
-    dao: MockDb,
+mod mock_tx_impl {
+    use chrono::NaiveDate;
+    use tx_rs::Tx;
 
-    emp_id: EmployeeId,
-    name: String,
-    address: String,
-    salary: f32,
-}
-impl HavePayrollDao<()> for AddSalaryEmployeeTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
-    }
-}
-impl Transaction<()> for AddSalaryEmployeeTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        AddSalaryEmployeeTx::execute(
-            self,
-            self.emp_id,
-            &self.name,
-            &self.address,
-            self.salary.clone(),
-        )
-        .map(|_| ())
-        .run(ctx)
-    }
-}
+    use crate::abstract_tx::UsecaseError;
+    use crate::dao::{HavePayrollDao, PayrollDao};
+    use crate::mock_db::MockDb;
+    use crate::payroll_domain::{EmployeeId, MemberId};
+    use crate::tx_app::Transaction;
+    use crate::tx_impl::{
+        AddCommissionedEmployeeTx, AddHourlyEmployeeTx, AddSalaryEmployeeTx,
+        ChangeEmployeeAddressTx, ChangeEmployeeCommissionedTx, ChangeEmployeeDirectTx,
+        ChangeEmployeeHoldTx, ChangeEmployeeHourlyTx, ChangeEmployeeMailTx, ChangeEmployeeNameTx,
+        ChangeEmployeeSalariedTx, ChangeUnaffiliatedTx, ChangeUnionMemberTx, DeleteEmployeeTx,
+        PaydayTx, SalesReceiptTx, ServiceChargeTx, TimeCardTx,
+    };
 
-struct AddHourlyEmployeeTxImpl {
-    dao: MockDb,
+    pub struct AddSalaryEmployeeTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    name: String,
-    address: String,
-    hourly_rate: f32,
-}
-impl HavePayrollDao<()> for AddHourlyEmployeeTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub name: String,
+        pub address: String,
+        pub salary: f32,
     }
-}
-impl Transaction<()> for AddHourlyEmployeeTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        AddHourlyEmployeeTx::execute(
-            self,
-            self.emp_id,
-            &self.name,
-            &self.address,
-            self.hourly_rate.clone(),
-        )
-        .map(|_| ())
-        .run(ctx)
+    impl HavePayrollDao<()> for AddSalaryEmployeeTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
-
-struct AddCommissionedEmployeeTxImpl {
-    dao: MockDb,
-
-    emp_id: EmployeeId,
-    name: String,
-    address: String,
-    salary: f32,
-    commission_rate: f32,
-}
-impl HavePayrollDao<()> for AddCommissionedEmployeeTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
-    }
-}
-impl Transaction<()> for AddCommissionedEmployeeTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        AddCommissionedEmployeeTx::execute(
-            self,
-            self.emp_id,
-            &self.name,
-            &self.address,
-            self.salary.clone(),
-            self.commission_rate.clone(),
-        )
-        .map(|_| ())
-        .run(ctx)
-    }
-}
-
-struct ChangeEmployeeNameTxImpl {
-    dao: MockDb,
-
-    emp_id: EmployeeId,
-    name: String,
-}
-impl HavePayrollDao<()> for ChangeEmployeeNameTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
-    }
-}
-impl Transaction<()> for ChangeEmployeeNameTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeNameTx::execute(self, self.emp_id, &self.name)
+    impl Transaction<()> for AddSalaryEmployeeTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            AddSalaryEmployeeTx::execute(
+                self,
+                self.emp_id,
+                &self.name,
+                &self.address,
+                self.salary.clone(),
+            )
             .map(|_| ())
             .run(ctx)
+        }
     }
-}
 
-struct ChangeEmployeeAddressTxImpl {
-    dao: MockDb,
+    pub struct AddHourlyEmployeeTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    address: String,
-}
-impl HavePayrollDao<()> for ChangeEmployeeAddressTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub name: String,
+        pub address: String,
+        pub hourly_rate: f32,
     }
-}
-impl Transaction<()> for ChangeEmployeeAddressTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeAddressTx::execute(self, self.emp_id, &self.address)
+    impl HavePayrollDao<()> for AddHourlyEmployeeTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for AddHourlyEmployeeTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            AddHourlyEmployeeTx::execute(
+                self,
+                self.emp_id,
+                &self.name,
+                &self.address,
+                self.hourly_rate.clone(),
+            )
             .map(|_| ())
             .run(ctx)
+        }
     }
-}
 
-struct ChangeEmployeeSalariedTxImpl {
-    dao: MockDb,
+    pub struct AddCommissionedEmployeeTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    salary: f32,
-}
-impl HavePayrollDao<()> for ChangeEmployeeSalariedTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub name: String,
+        pub address: String,
+        pub salary: f32,
+        pub commission_rate: f32,
     }
-}
-impl Transaction<()> for ChangeEmployeeSalariedTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeSalariedTx::execute(self, self.emp_id, self.salary)
+    impl HavePayrollDao<()> for AddCommissionedEmployeeTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for AddCommissionedEmployeeTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            AddCommissionedEmployeeTx::execute(
+                self,
+                self.emp_id,
+                &self.name,
+                &self.address,
+                self.salary.clone(),
+                self.commission_rate.clone(),
+            )
             .map(|_| ())
             .run(ctx)
+        }
     }
-}
 
-struct ChangeEmployeeHourlyTxImpl {
-    dao: MockDb,
+    pub struct ChangeEmployeeNameTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    hourly_rate: f32,
-}
-impl HavePayrollDao<()> for ChangeEmployeeHourlyTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub name: String,
     }
-}
-impl Transaction<()> for ChangeEmployeeHourlyTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeHourlyTx::execute(self, self.emp_id, self.hourly_rate)
+    impl HavePayrollDao<()> for ChangeEmployeeNameTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for ChangeEmployeeNameTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeNameTx::execute(self, self.emp_id, &self.name)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
+
+    pub struct ChangeEmployeeAddressTxImpl {
+        pub dao: MockDb,
+
+        pub emp_id: EmployeeId,
+        pub address: String,
+    }
+    impl HavePayrollDao<()> for ChangeEmployeeAddressTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for ChangeEmployeeAddressTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeAddressTx::execute(self, self.emp_id, &self.address)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
+
+    pub struct ChangeEmployeeSalariedTxImpl {
+        pub dao: MockDb,
+
+        pub emp_id: EmployeeId,
+        pub salary: f32,
+    }
+    impl HavePayrollDao<()> for ChangeEmployeeSalariedTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for ChangeEmployeeSalariedTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeSalariedTx::execute(self, self.emp_id, self.salary)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
+
+    pub struct ChangeEmployeeHourlyTxImpl {
+        pub dao: MockDb,
+
+        pub emp_id: EmployeeId,
+        pub hourly_rate: f32,
+    }
+    impl HavePayrollDao<()> for ChangeEmployeeHourlyTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for ChangeEmployeeHourlyTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeHourlyTx::execute(self, self.emp_id, self.hourly_rate)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
+
+    pub struct ChangeEmployeeCommissionedTxImpl {
+        pub dao: MockDb,
+
+        pub emp_id: EmployeeId,
+        pub salary: f32,
+        pub commission_rate: f32,
+    }
+    impl HavePayrollDao<()> for ChangeEmployeeCommissionedTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for ChangeEmployeeCommissionedTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeCommissionedTx::execute(
+                self,
+                self.emp_id,
+                self.salary,
+                self.commission_rate,
+            )
             .map(|_| ())
             .run(ctx)
+        }
     }
-}
 
-struct ChangeEmployeeCommissionedTxImpl {
-    dao: MockDb,
+    pub struct ChangeEmployeeHoldTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    salary: f32,
-    commission_rate: f32,
-}
-impl HavePayrollDao<()> for ChangeEmployeeCommissionedTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
     }
-}
-impl Transaction<()> for ChangeEmployeeCommissionedTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeCommissionedTx::execute(self, self.emp_id, self.salary, self.commission_rate)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for ChangeEmployeeHoldTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for ChangeEmployeeHoldTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeHoldTx::execute(self, self.emp_id)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct ChangeEmployeeHoldTxImpl {
-    dao: MockDb,
+    pub struct ChangeEmployeeMailTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-}
-impl HavePayrollDao<()> for ChangeEmployeeHoldTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub address: String,
     }
-}
-impl Transaction<()> for ChangeEmployeeHoldTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeHoldTx::execute(self, self.emp_id)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for ChangeEmployeeMailTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for ChangeEmployeeMailTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeMailTx::execute(self, self.emp_id, &self.address)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct ChangeEmployeeMailTxImpl {
-    dao: MockDb,
+    pub struct ChangeEmployeeDirectTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    address: String,
-}
-impl HavePayrollDao<()> for ChangeEmployeeMailTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub bank: String,
+        pub account: String,
     }
-}
-impl Transaction<()> for ChangeEmployeeMailTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeMailTx::execute(self, self.emp_id, &self.address)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for ChangeEmployeeDirectTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for ChangeEmployeeDirectTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeEmployeeDirectTx::execute(self, self.emp_id, &self.bank, &self.account)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct ChangeEmployeeDirectTxImpl {
-    dao: MockDb,
+    pub struct TimeCardTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    bank: String,
-    account: String,
-}
-impl HavePayrollDao<()> for ChangeEmployeeDirectTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub date: NaiveDate,
+        pub hours: f32,
     }
-}
-impl Transaction<()> for ChangeEmployeeDirectTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeEmployeeDirectTx::execute(self, self.emp_id, &self.bank, &self.account)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for TimeCardTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for TimeCardTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            TimeCardTx::execute(self, self.emp_id, self.date, self.hours)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct TimeCardTxImpl {
-    dao: MockDb,
+    pub struct SalesReceiptTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    date: NaiveDate,
-    hours: f32,
-}
-impl HavePayrollDao<()> for TimeCardTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub date: NaiveDate,
+        pub amount: f32,
     }
-}
-impl Transaction<()> for TimeCardTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        TimeCardTx::execute(self, self.emp_id, self.date, self.hours)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for SalesReceiptTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for SalesReceiptTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            SalesReceiptTx::execute(self, self.emp_id, self.date, self.amount)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct SalesReceiptTxImpl {
-    dao: MockDb,
+    pub struct ChangeUnionMemberTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    date: NaiveDate,
-    amount: f32,
-}
-impl HavePayrollDao<()> for SalesReceiptTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
+        pub member_id: MemberId,
+        pub dues: f32,
     }
-}
-impl Transaction<()> for SalesReceiptTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        SalesReceiptTx::execute(self, self.emp_id, self.date, self.amount)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for ChangeUnionMemberTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for ChangeUnionMemberTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeUnionMemberTx::execute(self, self.emp_id, self.member_id, self.dues)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct ChangeUnionMemberTxImpl {
-    dao: MockDb,
+    pub struct ChangeUnaffiliatedTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-    member_id: MemberId,
-    dues: f32,
-}
-impl HavePayrollDao<()> for ChangeUnionMemberTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
     }
-}
-impl Transaction<()> for ChangeUnionMemberTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeUnionMemberTx::execute(self, self.emp_id, self.member_id, self.dues)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for ChangeUnaffiliatedTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for ChangeUnaffiliatedTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ChangeUnaffiliatedTx::execute(self, self.emp_id)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct ChangeUnaffiliatedTxImpl {
-    dao: MockDb,
+    pub struct ServiceChargeTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-}
-impl HavePayrollDao<()> for ChangeUnaffiliatedTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub member_id: MemberId,
+        pub date: NaiveDate,
+        pub amount: f32,
     }
-}
-impl Transaction<()> for ChangeUnaffiliatedTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ChangeUnaffiliatedTx::execute(self, self.emp_id)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for ServiceChargeTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for ServiceChargeTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            ServiceChargeTx::execute(self, self.member_id, self.date, self.amount)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct ServiceChargeTxImpl {
-    dao: MockDb,
+    pub struct DeleteEmployeeTxImpl {
+        pub dao: MockDb,
 
-    member_id: MemberId,
-    date: NaiveDate,
-    amount: f32,
-}
-impl HavePayrollDao<()> for ServiceChargeTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub emp_id: EmployeeId,
     }
-}
-impl Transaction<()> for ServiceChargeTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        ServiceChargeTx::execute(self, self.member_id, self.date, self.amount)
-            .map(|_| ())
-            .run(ctx)
+    impl HavePayrollDao<()> for DeleteEmployeeTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
     }
-}
+    impl Transaction<()> for DeleteEmployeeTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            DeleteEmployeeTx::execute(self, self.emp_id)
+                .map(|_| ())
+                .run(ctx)
+        }
+    }
 
-struct DeleteEmployeeTxImpl {
-    dao: MockDb,
+    pub struct PaydayTxImpl {
+        pub dao: MockDb,
 
-    emp_id: EmployeeId,
-}
-impl HavePayrollDao<()> for DeleteEmployeeTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
+        pub date: NaiveDate,
+    }
+    impl HavePayrollDao<()> for PaydayTxImpl {
+        fn dao(&self) -> &impl PayrollDao<()> {
+            &self.dao
+        }
+    }
+    impl Transaction<()> for PaydayTxImpl {
+        fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+            PaydayTx::execute(self, self.date).map(|_| ()).run(ctx)
+        }
     }
 }
-impl Transaction<()> for DeleteEmployeeTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        DeleteEmployeeTx::execute(self, self.emp_id)
-            .map(|_| ())
-            .run(ctx)
-    }
-}
-
-struct PaydayTxImpl {
-    dao: MockDb,
-
-    date: NaiveDate,
-}
-impl HavePayrollDao<()> for PaydayTxImpl {
-    fn dao(&self) -> &impl PayrollDao<()> {
-        &self.dao
-    }
-}
-impl Transaction<()> for PaydayTxImpl {
-    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
-        PaydayTx::execute(self, self.date).map(|_| ()).run(ctx)
-    }
-}
+use mock_tx_impl::*;
 
 fn main() {
     let db = MockDb::new();
