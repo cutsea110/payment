@@ -1226,9 +1226,14 @@ mod tx_impl {
 }
 use tx_impl::*;
 
-trait Transaction<Ctx> {
-    fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
+mod tx_app {
+    use crate::abstract_tx::UsecaseError;
+
+    pub trait Transaction<Ctx> {
+        fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
+    }
 }
+use tx_app::*;
 
 struct AddSalaryEmployeeTxImpl {
     dao: MockDb,
