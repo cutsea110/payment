@@ -37,6 +37,21 @@ impl Employee {
     fn set_affiliation(&mut self, affiliation: Rc<RefCell<dyn Affiliation>>) {
         self.affiliation = affiliation;
     }
+    pub fn is_pay_date(&self, date: NaiveDate) -> bool {
+        self.schedule.borrow().is_pay_date(date)
+    }
+    pub fn get_pay_period(&self, payday: NaiveDate) -> RangeInclusive<NaiveDate> {
+        self.schedule.borrow().calculate_period(payday)
+    }
+    pub fn payday(&self, pc: &mut Paycheck) {
+        let gross_pay = self.classification.borrow().calculate_pay(pc);
+        let deductions = self.affiliation.borrow().calculate_deductions(pc);
+        let net_pay = gross_pay - deductions;
+        pc.set_gross_pay(gross_pay);
+        pc.set_deductions(deductions);
+        pc.set_net_pay(net_pay);
+        self.method.borrow().pay(pc);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,6 +60,25 @@ struct Paycheck {
     gross_pay: f32,
     deductions: f32,
     net_pay: f32,
+}
+impl Paycheck {
+    fn new(period: RangeInclusive<NaiveDate>) -> Self {
+        Self {
+            period,
+            gross_pay: 0.0,
+            deductions: 0.0,
+            net_pay: 0.0,
+        }
+    }
+    pub fn set_gross_pay(&mut self, gross_pay: f32) {
+        self.gross_pay = gross_pay;
+    }
+    pub fn set_deductions(&mut self, deductions: f32) {
+        self.deductions = deductions;
+    }
+    pub fn set_net_pay(&mut self, net_pay: f32) {
+        self.net_pay = net_pay;
+    }
 }
 
 trait PaymentClassification: DynClone + Debug {
@@ -1052,6 +1086,38 @@ trait ServiceChargeTx<Ctx>: HavePayrollDao<Ctx> {
 // blanket implementation
 impl<T, Ctx> ServiceChargeTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
 
+trait PaydayTx<Ctx>: HavePayrollDao<Ctx> {
+    fn execute<'a>(
+        &'a self,
+        pay_date: NaiveDate,
+    ) -> impl tx_rs::Tx<Ctx, Item = (), Err = UsecaseError>
+    where
+        Ctx: 'a,
+    {
+        tx_rs::with_tx(move |ctx| {
+            let emps = self
+                .dao()
+                .fetch_all()
+                .run(ctx)
+                .map_err(UsecaseError::GetAllFailed)?;
+            for emp in emps {
+                if emp.is_pay_date(pay_date) {
+                    let period = emp.get_pay_period(pay_date);
+                    let mut pc = Paycheck::new(period);
+                    emp.payday(&mut pc);
+                    self.dao()
+                        .record_paycheck(emp.emp_id, pc)
+                        .run(ctx)
+                        .map_err(UsecaseError::UpdateEmployeeFailed)?;
+                }
+            }
+            Ok(())
+        })
+    }
+}
+// blanket implementation
+impl<T, Ctx> PaydayTx<Ctx> for T where T: HavePayrollDao<Ctx> {}
+
 trait Transaction<Ctx> {
     fn execute(&self, ctx: &mut Ctx) -> Result<(), UsecaseError>;
 }
@@ -1408,6 +1474,22 @@ impl Transaction<()> for DeleteEmployeeTxImpl {
     }
 }
 
+struct PaydayTxImpl {
+    dao: MockDb,
+
+    date: NaiveDate,
+}
+impl HavePayrollDao<()> for PaydayTxImpl {
+    fn dao(&self) -> &impl PayrollDao<()> {
+        &self.dao
+    }
+}
+impl Transaction<()> for PaydayTxImpl {
+    fn execute<'a>(&'a self, ctx: &mut ()) -> Result<(), UsecaseError> {
+        PaydayTx::execute(self, self.date).map(|_| ()).run(ctx)
+    }
+}
+
 fn main() {
     let db = MockDb::new();
 
@@ -1547,7 +1629,7 @@ fn main() {
     let tx: Box<dyn Transaction<()>> = Box::new(SalesReceiptTxImpl {
         dao: db.clone(),
         emp_id: 3,
-        date: NaiveDate::from_ymd_opt(2024, 9, 15).unwrap(),
+        date: NaiveDate::from_ymd_opt(2024, 9, 17).unwrap(),
         amount: 12300.0,
     });
     tx.execute(&mut ()).expect("add sales receipt");
@@ -1587,6 +1669,34 @@ fn main() {
         amount: 123.75,
     });
     tx.execute(&mut ()).expect("add service charge");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(PaydayTxImpl {
+        dao: db.clone(),
+        date: NaiveDate::from_ymd_opt(2024, 9, 13).unwrap(),
+    });
+    tx.execute(&mut ()).expect("payday");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(PaydayTxImpl {
+        dao: db.clone(),
+        date: NaiveDate::from_ymd_opt(2024, 9, 20).unwrap(),
+    });
+    tx.execute(&mut ()).expect("payday");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(PaydayTxImpl {
+        dao: db.clone(),
+        date: NaiveDate::from_ymd_opt(2024, 9, 28).unwrap(),
+    });
+    tx.execute(&mut ()).expect("payday");
+    println!("{:#?}", db);
+
+    let tx: Box<dyn Transaction<()>> = Box::new(PaydayTxImpl {
+        dao: db.clone(),
+        date: NaiveDate::from_ymd_opt(2024, 9, 30).unwrap(),
+    });
+    tx.execute(&mut ()).expect("payday");
     println!("{:#?}", db);
 
     let tx: Box<dyn Transaction<()>> = Box::new(ChangeUnaffiliatedTxImpl {
