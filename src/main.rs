@@ -242,13 +242,16 @@ impl PaymentMethod for PaymentMethodImpl {
     fn pay(&self, pc: &Paycheck) {
         match self {
             PaymentMethodImpl::Hold => {
-                println!("Hold the check");
+                println!("Hold the check: {:#?}", pc);
             }
             PaymentMethodImpl::Mail { address } => {
-                println!("Send check to {} by Mail", address);
+                println!("Send check to {} by Mail: {:#?}", address, pc);
             }
             PaymentMethodImpl::Direct { bank, account } => {
-                println!("Direct deposit ${} to {} at {}", pc.net_pay, account, bank);
+                println!(
+                    "Direct deposit ${} to {} at {}: {:#?}",
+                    pc.net_pay, account, bank, pc
+                );
             }
         }
     }
