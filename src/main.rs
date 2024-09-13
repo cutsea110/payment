@@ -1,6 +1,3 @@
-use abstract_tx::UsecaseError;
-use chrono::NaiveDate;
-
 mod payroll_domain {
     use chrono::NaiveDate;
     use dyn_clone::DynClone;
@@ -579,7 +576,6 @@ mod mock_db {
         }
     }
 }
-use mock_db::*;
 
 mod abstract_tx {
     use std::{cell::RefCell, fmt::Debug, rc::Rc};
@@ -1244,7 +1240,6 @@ mod tx_app {
         }
     }
 }
-use tx_app::*;
 
 mod mock_tx_impl {
     use chrono::NaiveDate;
@@ -1636,7 +1631,6 @@ mod mock_tx_impl {
         }
     }
 }
-use mock_tx_impl::*;
 
 mod text_parser_tx_source {
     use parsec_rs::Parser;
@@ -1801,7 +1795,6 @@ mod text_parser_tx_source {
         }
     }
 }
-use text_parser_tx_source::*;
 
 mod mock_app {
     use std::path::PathBuf;
@@ -1832,7 +1825,6 @@ mod mock_app {
         }
     }
 }
-use mock_app::*;
 
 mod parser {
     use chrono::NaiveDate;
@@ -2894,6 +2886,10 @@ mod parser {
         }
     }
 }
+
+use abstract_tx::UsecaseError;
+use mock_app::*;
+use tx_app::*;
 
 fn main() -> Result<(), UsecaseError> {
     let mut app = TestPayrollApp::new("script/test.scr");
