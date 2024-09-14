@@ -7,11 +7,16 @@ use mock_db::MockDb;
 use payroll_domain::{EmployeeId, MemberId};
 use tx_app::Transaction;
 use tx_impl::{
-    AddCommissionedEmployeeTx, AddHourlyEmployeeTx, AddSalaryEmployeeTx, ChangeEmployeeAddressTx,
-    ChangeEmployeeCommissionedTx, ChangeEmployeeDirectTx, ChangeEmployeeHoldTx,
-    ChangeEmployeeHourlyTx, ChangeEmployeeMailTx, ChangeEmployeeNameTx, ChangeEmployeeSalariedTx,
-    ChangeUnaffiliatedTx, ChangeUnionMemberTx, DeleteEmployeeTx, PaydayTx, SalesReceiptTx,
-    ServiceChargeTx, TimeCardTx,
+    affiliation::{ChangeUnaffiliatedTx, ChangeUnionMemberTx, ServiceChargeTx},
+    classification::{
+        ChangeEmployeeCommissionedTx, ChangeEmployeeHourlyTx, ChangeEmployeeSalariedTx,
+    },
+    general::{
+        AddCommissionedEmployeeTx, AddHourlyEmployeeTx, AddSalaryEmployeeTx,
+        ChangeEmployeeAddressTx, ChangeEmployeeNameTx, DeleteEmployeeTx, PaydayTx, SalesReceiptTx,
+        TimeCardTx,
+    },
+    method::{ChangeEmployeeDirectTx, ChangeEmployeeHoldTx, ChangeEmployeeMailTx},
 };
 
 pub struct AddSalaryEmployeeTxImpl {
