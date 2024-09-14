@@ -1,0 +1,15 @@
+[package]
+name = "text-parser-tx-source"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+
+[dependencies]
+parsec-rs.workspace = true
+
+mock-db = { path = "../mock-db" }
+mock-tx-impl = { path = "../mock-tx-impl" }
+parser = { path = "../parser" }
+tx-app = { path = "../tx-app" }

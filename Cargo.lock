@@ -3,6 +3,17 @@
 version = 3
 
 [[package]]
+name = "abstract-tx"
+version = "0.1.0"
+dependencies = [
+ "dao",
+ "payroll-domain",
+ "payroll-impl",
+ "thiserror",
+ "tx-rs",
+]
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -66,6 +77,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
+name = "dao"
+version = "0.1.0"
+dependencies = [
+ "payroll-domain",
+ "thiserror",
+ "tx-rs",
+]
+
+[[package]]
 name = "dyn-clone"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -116,6 +136,47 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "mock-app"
+version = "0.1.0"
+dependencies = [
+ "mock-db",
+ "text-parser-tx-source",
+ "tx-app",
+]
+
+[[package]]
+name = "mock-db"
+version = "0.1.0"
+dependencies = [
+ "dao",
+ "payroll-domain",
+ "tx-rs",
+]
+
+[[package]]
+name = "mock-main"
+version = "0.1.0"
+dependencies = [
+ "abstract-tx",
+ "mock-app",
+ "tx-app",
+]
+
+[[package]]
+name = "mock-tx-impl"
+version = "0.1.0"
+dependencies = [
+ "abstract-tx",
+ "chrono",
+ "dao",
+ "mock-db",
+ "payroll-domain",
+ "tx-app",
+ "tx-impl",
+ "tx-rs",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -126,9 +187,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.19.0"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+checksum = "33ea5043e58958ee56f3e15a90aee535795cd7dfd319846288d93c5b57d85cbe"
 
 [[package]]
 name = "parsec-rs"
@@ -139,14 +200,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "payroll"
+name = "parser"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "parsec-rs",
+ "payroll-domain",
+]
+
+[[package]]
+name = "payroll-domain"
 version = "0.1.0"
 dependencies = [
  "chrono",
  "dyn-clone",
- "parsec-rs",
- "thiserror",
- "tx-rs",
+]
+
+[[package]]
+name = "payroll-impl"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "payroll-domain",
 ]
 
 [[package]]
@@ -205,6 +280,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "text-parser-tx-source"
+version = "0.1.0"
+dependencies = [
+ "mock-db",
+ "mock-tx-impl",
+ "parsec-rs",
+ "parser",
+ "tx-app",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -222,6 +308,25 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tx-app"
+version = "0.1.0"
+dependencies = [
+ "abstract-tx",
+]
+
+[[package]]
+name = "tx-impl"
+version = "0.1.0"
+dependencies = [
+ "abstract-tx",
+ "chrono",
+ "dao",
+ "payroll-domain",
+ "payroll-impl",
+ "tx-rs",
 ]
 
 [[package]]

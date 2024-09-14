@@ -1,0 +1,13 @@
+[package]
+name = "mock-db"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+
+[dependencies]
+tx-rs.workspace = true
+
+dao = { path = "../dao" }
+payroll-domain = { path = "../payroll-domain" }

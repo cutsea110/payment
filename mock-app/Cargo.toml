@@ -1,0 +1,12 @@
+[package]
+name = "mock-app"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+
+[dependencies]
+mock-db = { path = "../mock-db" }
+text-parser-tx-source = { path = "../text-parser-tx-source" }
+tx-app = { path = "../tx-app" }

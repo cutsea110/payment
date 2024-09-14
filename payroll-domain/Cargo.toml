@@ -1,0 +1,11 @@
+[package]
+name = "payroll-domain"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono.workspace = true
+dyn-clone.workspace = true

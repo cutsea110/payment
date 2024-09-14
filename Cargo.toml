@@ -1,11 +1,23 @@
-[package]
-name = "payroll"
+[workspace]
+members = [ "abstract-tx", "dao", "mock-app", "mock-db", "mock-main", "mock-tx-impl", "parser","payroll-domain", "payroll-impl", "text-parser-tx-source", "tx-app", "tx-impl"]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
+authors = ["Katsutoshi Itoh"]
+description = "agile software development"
+documentation = "https://www.amazon.co.jp/dp/4797347783"
 edition = "2021"
 
-[dependencies]
+[workspace.dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
 dyn-clone = "1.0.17"
 parsec-rs = { git = "https://github.com/cutsea110/fragments.git", branch = "main" }
 thiserror = "1.0.63"
 tx-rs = { git = "https://github.com/cutsea110/fragments.git", branch = "main" }
+
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+panic = "abort"

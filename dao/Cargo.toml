@@ -1,0 +1,13 @@
+[package]
+name = "dao"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+edition.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tx-rs.workspace = true
+
+payroll-domain = { path = "../payroll-domain" }
