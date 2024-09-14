@@ -1,18 +1,7 @@
-use thiserror::Error;
+mod error;
+pub use error::DaoError;
 
 use payroll_domain::{Employee, EmployeeId, MemberId, Paycheck};
-
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
-pub enum DaoError {
-    #[error("insert error: {0}")]
-    InsertError(String),
-    #[error("delete error: {0}")]
-    DeleteError(String),
-    #[error("fetch error: {0}")]
-    FetchError(String),
-    #[error("update error: {0}")]
-    UpdateError(String),
-}
 
 pub trait PayrollDao<Ctx> {
     fn insert(&self, emp: Employee) -> impl tx_rs::Tx<Ctx, Item = EmployeeId, Err = DaoError>;
