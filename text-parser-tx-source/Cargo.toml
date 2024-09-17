@@ -7,9 +7,11 @@ documentation.workspace = true
 edition.workspace = true
 
 [dependencies]
+chrono.workspace = true
 parsec-rs.workspace = true
 
 mock-db = { path = "../mock-db" }
 mock-tx-impl = { path = "../mock-tx-impl" }
-parser = { path = "../parser" }
+payroll-domain = { path = "../payroll-domain" }
 tx-app = { path = "../tx-app" }
+tx-factory = { path = "../tx-factory" }

@@ -201,15 +201,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parser"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "parsec-rs",
- "payroll-domain",
-]
-
-[[package]]
 name = "payroll-domain"
 version = "0.1.0"
 dependencies = [
@@ -284,11 +275,13 @@ dependencies = [
 name = "text-parser-tx-source"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "mock-db",
  "mock-tx-impl",
  "parsec-rs",
- "parser",
+ "payroll-domain",
  "tx-app",
+ "tx-factory",
 ]
 
 [[package]]

@@ -17,7 +17,6 @@ impl TestPayrollApp {
         }
     }
 }
-
 impl TransactionApplication<()> for TestPayrollApp {
     fn tx_source(&self) -> impl TransactionSource<()> {
         let input = std::fs::read_to_string(&self.file_path).expect("read script file");

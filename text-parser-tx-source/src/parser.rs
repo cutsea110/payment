@@ -1,92 +1,18 @@
 use chrono::NaiveDate;
 use parsec_rs::{char, float32, int32, keyword, pred, spaces, string, uint32, Parser};
+use std::collections::VecDeque;
 
-use payroll_domain::EmployeeId;
+use crate::command::Command;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Command {
-    AddSalaryEmp {
-        emp_id: EmployeeId,
-        name: String,
-        address: String,
-        salary: f32,
-    },
-    AddHourlyEmp {
-        emp_id: EmployeeId,
-        name: String,
-        address: String,
-        hourly_rate: f32,
-    },
-    AddCommissionedEmp {
-        emp_id: EmployeeId,
-        name: String,
-        address: String,
-        salary: f32,
-        commission_rate: f32,
-    },
-    DelEmp {
-        emp_id: EmployeeId,
-    },
-    TimeCard {
-        emp_id: EmployeeId,
-        date: NaiveDate,
-        hours: f32,
-    },
-    SalesReceipt {
-        emp_id: EmployeeId,
-        date: NaiveDate,
-        amount: f32,
-    },
-    ServiceCharge {
-        member_id: EmployeeId,
-        date: NaiveDate,
-        amount: f32,
-    },
-    ChgName {
-        emp_id: EmployeeId,
-        name: String,
-    },
-    ChgAddress {
-        emp_id: EmployeeId,
-        address: String,
-    },
-    ChgHourly {
-        emp_id: EmployeeId,
-        hourly_rate: f32,
-    },
-    ChgSalaried {
-        emp_id: EmployeeId,
-        salary: f32,
-    },
-    ChgCommissioned {
-        emp_id: EmployeeId,
-        salary: f32,
-        commission_rate: f32,
-    },
-    ChgHold {
-        emp_id: EmployeeId,
-    },
-    ChgDirect {
-        emp_id: EmployeeId,
-        bank: String,
-        account: String,
-    },
-    ChgMail {
-        emp_id: EmployeeId,
-        address: String,
-    },
-    ChgMember {
-        emp_id: EmployeeId,
-        member_id: EmployeeId,
-        dues: f32,
-    },
-    ChgNoMember {
-        emp_id: EmployeeId,
-    },
-    Payday {
-        pay_date: NaiveDate,
-    },
+pub fn read_commands(script: &str) -> VecDeque<Command> {
+    let commands: VecDeque<Command> = transactions()
+        .parse(script)
+        .map(|p| p.0.into())
+        .unwrap_or_default();
+
+    commands
 }
+
 pub fn transactions() -> impl Parser<Item = Vec<Command>> {
     transaction().many0()
 }
