@@ -16,6 +16,7 @@ mod payday_tx;
 mod sales_receipt_tx;
 mod service_charge_tx;
 mod timecard_tx;
+mod tx_factory_impl;
 
 pub use add_commissioned_employee_tx::AddCommissionedEmployeeTxImpl;
 pub use add_hourly_employee_tx::AddHourlyEmployeeTxImpl;
@@ -35,3 +36,4 @@ pub use payday_tx::PaydayTxImpl;
 pub use sales_receipt_tx::SalesReceiptTxImpl;
 pub use service_charge_tx::ServiceChargeTxImpl;
 pub use timecard_tx::TimeCardTxImpl;
+pub use tx_factory_impl::TransactionFactoryImpl;

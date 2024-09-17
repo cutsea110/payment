@@ -1,5 +1,5 @@
 [package]
-name = "mock-tx-impl"
+name = "tx-factory"
 version.workspace = true
 authors.workspace = true
 description.workspace = true
@@ -8,12 +8,6 @@ edition.workspace = true
 
 [dependencies]
 chrono.workspace = true
-tx-rs.workspace = true
 
-abstract-tx = { path = "../abstract-tx" }
-dao = { path = "../dao" }
-mock-db = { path = "../mock-db" }
 payroll-domain = { path = "../payroll-domain" }
 tx-app = { path = "../tx-app" }
-tx-factory = { path = "../tx-factory" }
-tx-impl = { path = "../tx-impl" }

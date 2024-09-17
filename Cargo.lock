@@ -172,6 +172,7 @@ dependencies = [
  "mock-db",
  "payroll-domain",
  "tx-app",
+ "tx-factory",
  "tx-impl",
  "tx-rs",
 ]
@@ -315,6 +316,15 @@ name = "tx-app"
 version = "0.1.0"
 dependencies = [
  "abstract-tx",
+]
+
+[[package]]
+name = "tx-factory"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "payroll-domain",
+ "tx-app",
 ]
 
 [[package]]
