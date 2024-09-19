@@ -7,7 +7,7 @@ pub trait TransactionApplication<Ctx> {
     fn run(&mut self, ctx: &mut Ctx) -> Result<(), UsecaseError> {
         let mut tx_source = self.tx_source();
         while let Some(tx) = tx_source.get_transaction() {
-            let _ = tx.execute(ctx);
+            tx.execute(ctx)?;
         }
         Ok(())
     }
