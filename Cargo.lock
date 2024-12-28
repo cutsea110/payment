@@ -196,7 +196,7 @@ checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 [[package]]
 name = "parsec-rs"
 version = "0.1.0"
-source = "git+https://github.com/cutsea110/fragments.git?branch=main#4ef02f81aba45a27d2bdd94069014b4923859527"
+source = "git+https://github.com/cutsea110/fragments.git?branch=main#5155f5225e18852b7e00313d40ce7109fb36e4c9"
 dependencies = [
  "thiserror",
 ]
@@ -237,18 +237,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b9781016e935a97e8beecf0c933758c97a5520d32930e460142b4cd80c6338e"
+checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.216"
+version = "1.0.217"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46f859dbbf73865c6627ed570e78961cd3ac92407a2d117204c49232485da55e"
+checksum = "5a9bf7cf98d04a2b28aead066b7496853d4779c9cc183c440dbac457641e19a0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -336,7 +336,7 @@ dependencies = [
 [[package]]
 name = "tx-rs"
 version = "0.1.0"
-source = "git+https://github.com/cutsea110/fragments.git?branch=main#4ef02f81aba45a27d2bdd94069014b4923859527"
+source = "git+https://github.com/cutsea110/fragments.git?branch=main#5155f5225e18852b7e00313d40ce7109fb36e4c9"
 
 [[package]]
 name = "unicode-ident"
