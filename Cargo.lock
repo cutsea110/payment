@@ -141,6 +141,7 @@ name = "mock-app"
 version = "0.1.0"
 dependencies = [
  "mock-db",
+ "mock-tx-impl",
  "text-parser-tx-source",
  "tx-app",
 ]
@@ -277,8 +278,6 @@ name = "text-parser-tx-source"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "mock-db",
- "mock-tx-impl",
  "parsec-rs",
  "payroll-domain",
  "tx-app",

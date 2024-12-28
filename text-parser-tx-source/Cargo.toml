@@ -10,8 +10,6 @@ edition.workspace = true
 chrono.workspace = true
 parsec-rs.workspace = true
 
-mock-db = { path = "../mock-db" }
-mock-tx-impl = { path = "../mock-tx-impl" }
 payroll-domain = { path = "../payroll-domain" }
 tx-app = { path = "../tx-app" }
 tx-factory = { path = "../tx-factory" }

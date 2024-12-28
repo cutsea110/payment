@@ -8,5 +8,6 @@ edition.workspace = true
 
 [dependencies]
 mock-db = { path = "../mock-db" }
+mock-tx-impl = { path = "../mock-tx-impl" }
 text-parser-tx-source = { path = "../text-parser-tx-source" }
 tx-app = { path = "../tx-app" }

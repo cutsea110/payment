@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use mock_db::MockDb;
+use mock_tx_impl::TransactionFactoryImpl;
 use text_parser_tx_source::TextParserTransactionSource;
 use tx_app::{TransactionApplication, TransactionSource};
 
@@ -20,7 +21,8 @@ impl TestPayrollApp {
 impl TransactionApplication<()> for TestPayrollApp {
     fn tx_source(&self) -> impl TransactionSource<()> {
         let input = std::fs::read_to_string(&self.file_path).expect("read script file");
+        let tx_factory = TransactionFactoryImpl::new(self.db.clone());
 
-        TextParserTransactionSource::new(self.db.clone(), input)
+        TextParserTransactionSource::new(tx_factory, input)
     }
 }
