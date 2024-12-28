@@ -197,7 +197,7 @@ checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 [[package]]
 name = "parsec-rs"
 version = "0.1.0"
-source = "git+https://github.com/cutsea110/fragments.git?branch=main#5155f5225e18852b7e00313d40ce7109fb36e4c9"
+source = "git+https://github.com/cutsea110/fragments.git?branch=main#56edcc335134963b7195276ccf5ebf72ee5a989f"
 dependencies = [
  "thiserror",
 ]
@@ -264,9 +264,9 @@ checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
 name = "syn"
-version = "2.0.92"
+version = "2.0.93"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70ae51629bf965c5c098cc9e87908a3df5301051a9e087d6f9bef5c9771ed126"
+checksum = "9c786062daee0d6db1132800e623df74274a0a87322d8e183338e01b3d98d058"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -335,7 +335,7 @@ dependencies = [
 [[package]]
 name = "tx-rs"
 version = "0.1.0"
-source = "git+https://github.com/cutsea110/fragments.git?branch=main#5155f5225e18852b7e00313d40ce7109fb36e4c9"
+source = "git+https://github.com/cutsea110/fragments.git?branch=main#56edcc335134963b7195276ccf5ebf72ee5a989f"
 
 [[package]]
 name = "unicode-ident"
